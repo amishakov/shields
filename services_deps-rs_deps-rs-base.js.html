@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Source: services/website-status.js</title>
+    <title>JSDoc: Source: services/deps-rs/deps-rs-base.js</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Source: services/website-status.js</h1>
+    <h1 class="page-title">Source: services/deps-rs/deps-rs-base.js</h1>
 
     
 
@@ -26,71 +26,91 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>/**
- * Commonly used functions and utilities for tasks related to website status.
- *
- * @module
- */
+            <pre class="prettyprint source linenums"><code>import Joi from 'joi'
+import { BaseJsonService } from '../index.js'
 
-import Joi from 'joi'
-import { queryParams as qP } from './index.js'
-
-/**
- * Joi schema for validating query params.
- * Checks if the query params object has valid up_message, down_message, up_color and down_color properties.
- *
- * @type {Joi}
- */
-const queryParamSchema = Joi.object({
-  up_message: Joi.string(),
-  down_message: Joi.string(),
-  up_color: Joi.alternatives(Joi.string(), Joi.number()),
-  down_color: Joi.alternatives(Joi.string(), Joi.number()),
+const depsResponseSchema = Joi.object({
+  message: Joi.string().required(),
 }).required()
 
-/**
- * Array of OpenAPI Parameter Objects describing the
- * up_message, down_message, up_color and down_color
- * query params
- *
- * @type {Array.&lt;module:core/base-service/openapi~OpenApiParam>}
- */
-const queryParams = qP(
-  { name: 'up_message', example: 'online' },
-  { name: 'up_color', example: 'blue' },
-  { name: 'down_message', example: 'offline' },
-  { name: 'down_color', example: 'lightgrey' },
-)
+class BaseDepsRsService extends BaseJsonService {
+  static defaultBadgeData = { label: 'dependencies' }
 
-/**
- * Creates a badge object that displays information about website status.
- *
- * @param {object} options - The options for rendering the status
- * @param {boolean} options.isUp - Whether the website or service is up or down
- * @param {string} [options.upMessage='up'] - The message to display when the website or service is up
- * @param {string} [options.downMessage='down'] - The message to display when the website or service is down
- * @param {string} [options.upColor='brightgreen'] - The color to use when the website or service is up
- * @param {string} [options.downColor='red'] - The color to use when the website or service is down
- * @returns {object} An object with a message and a color property
- * @example
- * renderWebsiteStatus({ isUp: true }) // returns { message: 'up', color: 'brightgreen' }
- * renderWebsiteStatus({ isUp: false }) // returns { message: 'down', color: 'red' }
- */
-function renderWebsiteStatus({
-  isUp,
-  upMessage = 'up',
-  downMessage = 'down',
-  upColor = 'brightgreen',
-  downColor = 'red',
-}) {
-  if (isUp) {
-    return { message: upMessage, color: upColor }
-  } else {
-    return { message: downMessage, color: downColor }
+  /**
+   * Maps message values to shields color scheme
+   *
+   * @param {string} message - The message to help determine appropriate color
+   * @returns {string} The shields color
+   */
+  static mapColor(message) {
+    const normalizedMessage = message.toLowerCase()
+
+    const colorMap = {
+      'up to date': 'brightgreen',
+      none: 'brightgreen',
+      'maybe insecure': 'yellowgreen',
+      insecure: 'red',
+      unknown: 'lightgrey',
+      'not found': 'lightgrey',
+      invalid: 'lightgrey',
+    }
+
+    if (colorMap[normalizedMessage]) {
+      return colorMap[normalizedMessage]
+    }
+
+    // e.g. "1 of 2 outdated"
+    if (normalizedMessage.endsWith('outdated')) {
+      return 'yellow'
+    }
+
+    return 'lightgrey'
+  }
+
+  /**
+   * Fetches data from the deps.rs API.
+   *
+   * @param {object} options - The options for the request
+   * @param {string} options.crate - The crate name.
+   * @param {string} options.version - The crate version number or 'latest'.
+   * @returns {Promise&lt;object>} the JSON response from the API.
+   */
+  async fetchCrate({ crate, version }) {
+    const url = `https://deps.rs/crate/${crate}/${version}/shield.json`
+    return this._requestJson({
+      schema: depsResponseSchema,
+      url,
+      httpErrors: {
+        404: 'not found',
+      },
+    })
+  }
+
+  /**
+   * Fetches data from the deps.rs API for a repository.
+   *
+   * @param {object} options - The options for the request
+   * @param {string} options.site - The repository site (e.g., 'github').
+   * @param {string} options.user - The repository owner/user.
+   * @param {string} options.repo - The repository name.
+   * @returns {Promise&lt;object>} the JSON response from the API.
+   */
+  async fetchRepo({ site, user, repo }) {
+    const url = `https://deps.rs/repo/${site}/${user}/${repo}/shield.json`
+    return this._requestJson({
+      schema: depsResponseSchema,
+      url,
+      httpErrors: {
+        404: 'unknown',
+      },
+    })
   }
 }
 
-export { queryParamSchema, queryParams, renderWebsiteStatus }
+const description =
+  '[Deps.rs](https://deps.rs/) is a service that checks dependency security status in Rust projects.'
+
+export { BaseDepsRsService, description }
 </code></pre>
         </article>
     </section>
