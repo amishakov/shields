@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Tutorial: adding-new-config-values</title>
+    <title>JSDoc: Source: services/sonar/sonar-spec-helpers.js</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,39 +17,57 @@
 
 <div id="main">
 
-    <h1 class="page-title">Tutorial: adding-new-config-values</h1>
+    <h1 class="page-title">Source: services/sonar/sonar-spec-helpers.js</h1>
 
-    <section>
-
-<header>
     
 
-    <h2>adding-new-config-values</h2>
-</header>
 
-<article>
-    <h1>Adding New Config Values</h1>
-<p>The Badge Server supports a <a href="./server-secrets.md">variety of methods for defining configuration settings and secrets</a>, and provides a framework for loading those values during bootstrapping.</p>
-<p>Any new configuration setting or secret must be correctly registered so that it will be loaded at startup along with the others.</p>
-<p>This generally includes adding the corresponding information for your new setting(s)/secret(s) to the following locations:</p>
-<ul>
-<li><a href="https://github.com/badges/shields/blob/master/core/server/server.js">core/server/server.js</a> - Add the new values to the <a href="https://github.com/badges/shields/blob/e1443eb7146466ad987830c1f286e2b0b186500c/core/server/server.js#L67-L215">schemas</a>. Secrets/tokens/etc. should go in the <code>privateConfigSchema</code> while non-secret configuration settings should go in the <code>publicConfigSchema</code>.</li>
-<li><a href="https://github.com/badges/shields/blob/master/config/custom-environment-variables.yml">config/custom-environment-variables.yml</a></li>
-<li><a href="https://github.com/badges/shields/blob/master/doc/server-secrets.md">docs/server-secrets.md</a> (only applicable for secrets)</li>
-<li><a href="https://github.com/badges/shields/blob/master/config/default.yml">config/default.yml</a> (optional)</li>
-<li>Any other template config files (e.g. <code>config/local.template.yml</code>) (optional)</li>
-</ul>
-<p>The exact values needed will depend on what type of secret/setting you are adding, but for reference a few commits are included below which added secrets and or settings:</p>
-<ul>
-<li>(secret) <a href="https://github.com/badges/shields/commit/4a75cf09a786c5e93232ae699af985e5bc89440e">4a75cf09a786c5e93232ae699af985e5bc89440e</a></li>
-<li>(secret) <a href="https://github.com/badges/shields/commit/bd6f4ee1465d14a8f188c37823748a21b6a46762">bd6f4ee1465d14a8f188c37823748a21b6a46762</a></li>
-<li>(secret) <a href="https://github.com/badges/shields/commit/0fd557d7bb623e3852c92cebac586d5f6d6d89d8">0fd557d7bb623e3852c92cebac586d5f6d6d89d8</a></li>
-<li>(configuration setting) <a href="https://github.com/badges/shields/commit/b1fc4925928c061234e9492f3794c0797467e123">b1fc4925928c061234e9492f3794c0797467e123</a></li>
-</ul>
-<p>Don't hesitate to reach out if you're unsure of the exact values needed for your new secret/setting, or have any other questions. Feel free to post questions on your corresponding Issue/Pull Request, and/or ping us on the <code>contributing</code> channel on our Discord server.</p>
-</article>
 
-</section>
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import SonarBase from './sonar-base.js'
+import { openApiQueryParams } from './sonar-helpers.js'
+
+const testAuthConfigOverride = {
+  public: {
+    services: {
+      [SonarBase.auth.serviceKey]: {
+        authorizedOrigins: [
+          openApiQueryParams.find(v => v.name === 'server').example,
+        ],
+      },
+    },
+  },
+}
+
+/**
+ * Returns a legacy sonar api response with desired key and value
+ *
+ * @param {string} key Key for the response value
+ * @param {string|number} val Value to assign to response key
+ * @returns {object} Sonar api response
+ */
+function legacySonarResponse(key, val) {
+  return [
+    {
+      msr: [
+        {
+          key,
+          val,
+        },
+      ],
+    },
+  ]
+}
+
+export { testAuthConfigOverride, legacySonarResponse }
+</code></pre>
+        </article>
+    </section>
+
+
+
 
 </div>
 
