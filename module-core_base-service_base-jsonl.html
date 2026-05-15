@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Tutorial: badge-urls</title>
+    <title>JSDoc: Module: core/base-service/base-jsonl</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,62 +17,104 @@
 
 <div id="main">
 
-    <h1 class="page-title">Tutorial: badge-urls</h1>
+    <h1 class="page-title">Module: core/base-service/base-jsonl</h1>
 
-    <section>
+    
+
+
+
+
+<section>
 
 <header>
     
-
-    <h2>badge-urls</h2>
 </header>
 
 <article>
-    <h1>Badge URL Conventions</h1>
-<ul>
-<li>The format of new badges should be of the form <code>/SERVICE/NOUN/PARAMETERS?QUERYSTRING</code> e.g: <code>/github/issues/:user/:repo</code>. The service is github, the badge is for issues, and the parameters are <code>:user/:repo</code>.</li>
-<li>The <code>NOUN</code> part of the route is:
-<ul>
-<li>singular if the badge message represents a single entity, such as the current status of a build (e.g: <code>/build</code>), or a more abstract or aggregate representation of the thing (e.g.: <code>/coverage</code>, <code>/quality</code>)</li>
-<li>plural if there are (or may) be many of the thing (e.g: <code>/dependencies</code>, <code>/stars</code>)</li>
-</ul>
-</li>
-<li>Parameters should always be part of the route if they are required to display a badge e.g: <code>:packageName</code> and should be lower camelCase.</li>
-<li>Common optional params like, <code>:branch</code> or <code>:tag</code> should also be passed as part of the route.</li>
-<li>Query string parameters should be used when:
-<ul>
-<li>The parameter is related to formatting. e.g: <code>/appveyor/tests/:user/:repo?compact_message</code>.</li>
-<li>The parameter is for an uncommon optional attribute, like an alternate registry URL.</li>
-<li>The parameter triggers application of alternative logic, like version semantics. e.g: <code>/github/v/tag/:user/:repo?sort=semver</code>.</li>
-<li>Services which require a url/hostname parameter always should use a query string parameter to accept that value. e.g: <code>/discourse/topics?server=https://meta.discourse.org</code>.</li>
-<li>Similar to parameters, query string parameters should be lower camelCase e.g: 'labelColor' and not 'label_color'.</li>
-</ul>
-</li>
-<li>Query parameters for an alternative host of upstream data (like registry, repository, selfhost instance, etc) should be called <code>baseUrl</code> and include a full URL with protocol and path (if required).</li>
-</ul>
-<p>It is convention to use the following standard routes and abbreviations across services:</p>
-<ul>
-<li>Coverage: <code>/coverage</code></li>
-<li>Downloads or Installs:
-<ul>
-<li>Total: <code>/dt</code> - Use this even for services that only provide the total download/install data</li>
-<li>Per month: <code>/dm</code></li>
-<li>Per week: <code>/dw</code></li>
-<li>Per day: <code>/dd</code></li>
-</ul>
-</li>
-<li>Rating:
-<ul>
-<li>Numeric: <code>/rating</code></li>
-<li>Stars: <code>/stars</code></li>
-</ul>
-</li>
-<li>License: <code>/l</code></li>
-<li>Version or Release: <code>/v</code></li>
-</ul>
+    <div class="container-overview">
+    
+        
+
+        
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="core_base-service_base-jsonl.js.html">core/base-service/base-jsonl.js</a>, <a href="core_base-service_base-jsonl.js.html#line1">line 1</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+        
+    
+    </div>
+
+    
+
+    
+
+    
+        <h3 class="subsection-title">Classes</h3>
+
+        <dl>
+            <dt><a href="module-core_base-service_base-jsonl-BaseJsonlService.html">BaseJsonlService</a></dt>
+            <dd></dd>
+        </dl>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
 </article>
 
 </section>
+
+
+
 
 </div>
 
