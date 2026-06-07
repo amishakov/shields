@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Source: core/service-test-runner/service-tester.js</title>
+    <title>JSDoc: Source: core/base-service/trace.js</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Source: core/service-test-runner/service-tester.js</h1>
+    <h1 class="page-title">Source: core/base-service/trace.js</h1>
 
     
 
@@ -26,148 +26,65 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>/**
- * @module
- */
+            <pre class="prettyprint source linenums"><code>import chalk from 'chalk'
+import config from 'config'
+const objectConfig = config.util.toObject()
 
-import emojic from 'emojic'
-import icedfrisbyNockModule from 'icedfrisby-nock'
-import icedfrisbyModule from 'icedfrisby'
-import trace from '../base-service/trace.js'
-import icedfrisbyShieldsModule from './icedfrisby-shields.js'
-const frisby = icedfrisbyShieldsModule(icedfrisbyNockModule(icedfrisbyModule))
+// Config is loaded globally but it would be better to inject it. To do that,
+// there needs to be one instance of the service created at registration time,
+// which gets the config injected into it, instead of one instance per request.
+// That way most of the current static methods could become instance methods,
+// thereby gaining access to the injected config.
+const {
+  services: { trace: enableTraceLogging },
+} = objectConfig.public
 
 /**
- * Encapsulate a suite of tests. Create new tests using create() and register
- * them with Mocha using toss().
+ * Formats a stage label with a coloured background for console output.
  *
- * @see https://github.com/badges/shields/blob/master/doc/service-tests.md
+ * @param {'inbound'|'fetch'|'validate'|'unhandledError'|'outbound'} stage - Pipeline stage name.
+ * @param {string} label - Text to display inside the coloured badge.
+ * @returns {string} ANSI-coloured label string.
  */
-class ServiceTester {
-  /**
-   * Service Tester Constructor
-   *
-   * @param {object} attrs Refer to individual attrs
-   * @param {string} attrs.id
-   *    Specifies which tests to run from the CLI or pull requests
-   * @param {string} attrs.title
-   *    Prints in the Mocha output
-   * @param {string} attrs.pathPrefix
-   *    Prefix which is automatically prepended to each tested URI.
-   *    The default is `/${attrs.id}`.
-   */
-  constructor({ id, title, pathPrefix }) {
-    if (pathPrefix === undefined) {
-      pathPrefix = `/${id}`
+function _formatLabelForStage(stage, label) {
+  const colorFn = {
+    inbound: chalk.black.bgBlue,
+    fetch: chalk.black.bgYellow,
+    validate: chalk.black.bgGreen,
+    unhandledError: chalk.white.bgRed,
+    outbound: chalk.black.bgBlue,
+  }[stage]
+  return colorFn(` ${label} `)
+}
+
+/**
+ * Logs a trace message to the console when trace logging is enabled in config.
+ *
+ * @param {'inbound'|'fetch'|'validate'|'unhandledError'|'outbound'} stage - Pipeline stage used to colour the label.
+ * @param {string} symbol - Short symbol or emoji prefixed to the log line.
+ * @param {string} label - Descriptive label shown alongside the symbol.
+ * @param {*} content - Data to print; logged with `console.dir` when `deep` is true.
+ * @param {object} [options={}] - Optional logging configuration.
+ * @param {boolean} [options.deep=false] - When `true`, uses `console.dir` for full-depth output.
+ * @returns {boolean} `true` if the message was logged, `false` when trace logging is disabled.
+ */
+function logTrace(stage, symbol, label, content, { deep = false } = {}) {
+  if (enableTraceLogging) {
+    if (deep) {
+      console.log(_formatLabelForStage(stage, label), symbol)
+      console.dir(content, { depth: null })
+    } else {
+      console.log(_formatLabelForStage(stage, label), symbol, '\n', content)
     }
-    Object.assign(this, {
-      id,
-      title,
-      pathPrefix,
-      specs: [],
-      _only: false,
-    })
-  }
-
-  /**
-   * Construct a ServiceTester instance for a single service class
-   *
-   * @param {Function} ServiceClass
-   *    A class that extends base-service/base.BaseService
-   * @returns {ServiceTester}
-   *    ServiceTester for ServiceClass
-   */
-  static forServiceClass(ServiceClass) {
-    const id = ServiceClass.name
-    const pathPrefix = ServiceClass.route.base
-      ? `/${ServiceClass.route.base}`
-      : ''
-    return new this({
-      id,
-      title: id,
-      pathPrefix,
-    })
-  }
-
-  /**
-   * Invoked before each test. This is a stub which can be overridden on
-   * instances.
-   */
-  beforeEach() {}
-
-  /**
-   * Create a new test. The hard work is delegated to IcedFrisby.
-   * {@link https://github.com/MarkHerhold/IcedFrisby/#show-me-some-code}
-   *
-   * Note: The caller should not invoke toss() on the Frisby chain, as it's
-   * invoked automatically by the tester.
-   *
-   * @param {string} msg The name of the test
-   * @returns {module:icedfrisby~IcedFrisby} IcedFrisby instance
-   */
-  create(msg) {
-    const spec = frisby
-      .create(msg)
-      .before(() => {
-        this.beforeEach()
-      })
-      // eslint-disable-next-line promise/prefer-await-to-then
-      .finally(function () {
-        // `this` is the IcedFrisby instance.
-        let responseBody
-        try {
-          responseBody = JSON.parse(this._response.body)
-        } catch (e) {
-          responseBody = this._response.body
-        }
-        trace.logTrace('outbound', emojic.shield, 'Response', responseBody)
-      })
-
-    this.specs.push(spec)
-
-    return spec
-  }
-
-  /**
-   * Run only this tester. This can be invoked using the --only argument to
-   * the CLI, or directly on the tester.
-   */
-  only() {
-    this._only = true
-  }
-
-  /**
-   * Register the tests with Mocha.
-   *
-   * @param {object} attrs Refer to individual attrs
-   * @param {string} attrs.baseUrl base URL for test server
-   * @param {boolean} attrs.skipIntercepted skip tests which intercept requests
-   * @param {object} attrs.retry retry configuration
-   * @param {number} attrs.retry.count number of times to retry test
-   * @param {number} attrs.retry.backoff number of milliseconds to add to the wait between each retry
-   */
-  toss({ baseUrl, skipIntercepted, retry: { count, backoff } }) {
-    const { specs, pathPrefix } = this
-    const testerBaseUrl = `${baseUrl}${pathPrefix}`
-
-    const fn = this._only ? describe.only : describe
-    // eslint-disable-next-line mocha/prefer-arrow-callback
-    fn(this.title, function () {
-      specs.forEach(spec => {
-        spec._message = `[${spec.hasIntercept ? 'mocked' : 'live'}] ${
-          spec._message
-        }`
-        if (!skipIntercepted || !spec.intercepted) {
-          spec.baseUri(testerBaseUrl)
-          spec.retry(count, backoff)
-          spec.toss()
-        }
-      })
-    })
+    return true
+  } else {
+    return false
   }
 }
 
-export default ServiceTester
+export default {
+  logTrace,
+}
 </code></pre>
         </article>
     </section>

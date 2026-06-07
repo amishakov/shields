@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Source: core/service-test-runner/service-tester.js</title>
+    <title>JSDoc: Source: core/base-service/base-static.js</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Source: core/service-test-runner/service-tester.js</h1>
+    <h1 class="page-title">Source: core/base-service/base-static.js</h1>
 
     
 
@@ -26,148 +26,76 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>/**
- * @module
- */
-
-import emojic from 'emojic'
-import icedfrisbyNockModule from 'icedfrisby-nock'
-import icedfrisbyModule from 'icedfrisby'
-import trace from '../base-service/trace.js'
-import icedfrisbyShieldsModule from './icedfrisby-shields.js'
-const frisby = icedfrisbyShieldsModule(icedfrisbyNockModule(icedfrisbyModule))
+            <pre class="prettyprint source linenums"><code>import makeBadge from '../../badge-maker/lib/make-badge.js'
+import BaseService from './base.js'
+import {
+  serverHasBeenUpSinceResourceCached,
+  setCacheHeadersForStaticResource,
+} from './cache-headers.js'
+import { makeSend } from './legacy-result-sender.js'
+import { MetricHelper } from './metric-helper.js'
+import coalesceBadge from './coalesce-badge.js'
+import { prepareRoute, namedParamsForMatch } from './route.js'
 
 /**
- * Encapsulate a suite of tests. Create new tests using create() and register
- * them with Mocha using toss().
+ * Base class for services that generate static badges from route parameters
+ * and query parameters.
  *
- * @see https://github.com/badges/shields/blob/master/doc/service-tests.md
+ * Registers the service route, handles cache validation, invokes the service,
+ * builds the badge data, sets cache headers, renders the badge, and records
+ * request metrics.
  */
-class ServiceTester {
-  /**
-   * Service Tester Constructor
-   *
-   * @param {object} attrs Refer to individual attrs
-   * @param {string} attrs.id
-   *    Specifies which tests to run from the CLI or pull requests
-   * @param {string} attrs.title
-   *    Prints in the Mocha output
-   * @param {string} attrs.pathPrefix
-   *    Prefix which is automatically prepended to each tested URI.
-   *    The default is `/${attrs.id}`.
-   */
-  constructor({ id, title, pathPrefix }) {
-    if (pathPrefix === undefined) {
-      pathPrefix = `/${id}`
-    }
-    Object.assign(this, {
-      id,
-      title,
-      pathPrefix,
-      specs: [],
-      _only: false,
+export default class BaseStaticService extends BaseService {
+  static register({ camp, metricInstance }, serviceConfig) {
+    const { regex, captureNames } = prepareRoute(this.route)
+
+    const metricHelper = MetricHelper.create({
+      metricInstance,
+      ServiceClass: this,
     })
-  }
 
-  /**
-   * Construct a ServiceTester instance for a single service class
-   *
-   * @param {Function} ServiceClass
-   *    A class that extends base-service/base.BaseService
-   * @returns {ServiceTester}
-   *    ServiceTester for ServiceClass
-   */
-  static forServiceClass(ServiceClass) {
-    const id = ServiceClass.name
-    const pathPrefix = ServiceClass.route.base
-      ? `/${ServiceClass.route.base}`
-      : ''
-    return new this({
-      id,
-      title: id,
-      pathPrefix,
-    })
-  }
+    camp.route(regex, async (queryParams, match, end, ask) => {
+      if (serverHasBeenUpSinceResourceCached(ask.req)) {
+        // Send Not Modified.
+        ask.res.statusCode = 304
+        ask.res.end()
+        return
+      }
 
-  /**
-   * Invoked before each test. This is a stub which can be overridden on
-   * instances.
-   */
-  beforeEach() {}
+      const metricHandle = metricHelper.startRequest()
 
-  /**
-   * Create a new test. The hard work is delegated to IcedFrisby.
-   * {@link https://github.com/MarkHerhold/IcedFrisby/#show-me-some-code}
-   *
-   * Note: The caller should not invoke toss() on the Frisby chain, as it's
-   * invoked automatically by the tester.
-   *
-   * @param {string} msg The name of the test
-   * @returns {module:icedfrisby~IcedFrisby} IcedFrisby instance
-   */
-  create(msg) {
-    const spec = frisby
-      .create(msg)
-      .before(() => {
-        this.beforeEach()
-      })
-      // eslint-disable-next-line promise/prefer-await-to-then
-      .finally(function () {
-        // `this` is the IcedFrisby instance.
-        let responseBody
-        try {
-          responseBody = JSON.parse(this._response.body)
-        } catch (e) {
-          responseBody = this._response.body
-        }
-        trace.logTrace('outbound', emojic.shield, 'Response', responseBody)
-      })
+      const namedParams = namedParamsForMatch(captureNames, match, this)
+      const serviceData = await this.invoke(
+        {},
+        serviceConfig,
+        namedParams,
+        queryParams,
+      )
 
-    this.specs.push(spec)
+      const badgeData = coalesceBadge(
+        queryParams,
+        serviceData,
+        this.defaultBadgeData,
+        this,
+      )
 
-    return spec
-  }
+      // The final capture group is the extension.
+      const format = (match.slice(-1)[0] || '.svg').replace(/^\./, '')
+      badgeData.format = format
 
-  /**
-   * Run only this tester. This can be invoked using the --only argument to
-   * the CLI, or directly on the tester.
-   */
-  only() {
-    this._only = true
-  }
+      let maxAge = 24 * 3600 // 1 day
+      if (!queryParams.logo &amp;&amp; !badgeData.isError) {
+        maxAge = 5 * 24 * 3600 // 5 days
+      }
+      setCacheHeadersForStaticResource(ask.res, maxAge)
 
-  /**
-   * Register the tests with Mocha.
-   *
-   * @param {object} attrs Refer to individual attrs
-   * @param {string} attrs.baseUrl base URL for test server
-   * @param {boolean} attrs.skipIntercepted skip tests which intercept requests
-   * @param {object} attrs.retry retry configuration
-   * @param {number} attrs.retry.count number of times to retry test
-   * @param {number} attrs.retry.backoff number of milliseconds to add to the wait between each retry
-   */
-  toss({ baseUrl, skipIntercepted, retry: { count, backoff } }) {
-    const { specs, pathPrefix } = this
-    const testerBaseUrl = `${baseUrl}${pathPrefix}`
+      const svg = makeBadge(badgeData)
+      makeSend(format, ask.res, end)(svg)
 
-    const fn = this._only ? describe.only : describe
-    // eslint-disable-next-line mocha/prefer-arrow-callback
-    fn(this.title, function () {
-      specs.forEach(spec => {
-        spec._message = `[${spec.hasIntercept ? 'mocked' : 'live'}] ${
-          spec._message
-        }`
-        if (!skipIntercepted || !spec.intercepted) {
-          spec.baseUri(testerBaseUrl)
-          spec.retry(count, backoff)
-          spec.toss()
-        }
-      })
+      metricHandle.noteResponseSent()
     })
   }
 }
-
-export default ServiceTester
 </code></pre>
         </article>
     </section>
