@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Module: core/service-test-runner/icedfrisby-shields</title>
+    <title>JSDoc: Source: core/base-service/json.js</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,268 +17,49 @@
 
 <div id="main">
 
-    <h1 class="page-title">Module: core/service-test-runner/icedfrisby-shields</h1>
+    <h1 class="page-title">Source: core/base-service/json.js</h1>
 
     
 
 
 
-
-<section>
-
-<header>
     
-</header>
-
-<article>
-    <div class="container-overview">
-    
-        
-
-        
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="core_service-test-runner_icedfrisby-shields.js.html">core/service-test-runner/icedfrisby-shields.js</a>, <a href="core_service-test-runner_icedfrisby-shields.js.html#line1">line 1</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-        
-    
-    </div>
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-        <h3 class="subsection-title">Methods</h3>
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="~factory"><span class="type-signature">(inner) </span>factory<span class="signature">(superclass)</span><span class="type-signature"> &rarr; {function}</span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    <p>Factory which wraps an &quot;icedfrisby-nock&quot; with some additional functionality:</p>
-<ul>
-<li>check if a request was intercepted</li>
-<li>set expectations on the badge JSON response</li>
-</ul>
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>superclass</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">function</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>class to extend</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="core_service-test-runner_icedfrisby-shields.js.html">core/service-test-runner/icedfrisby-shields.js</a>, <a href="core_service-test-runner_icedfrisby-shields.js.html#line17">line 17</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-    <dt class="tag-see">See:</dt>
-    <dd class="tag-see">
-        <ul>
-            <li><a href="https://github.com/paulmelnikow/icedfrisby-nock/blob/master/icedfrisby-nock.js">https://github.com/paulmelnikow/icedfrisby-nock/blob/master/icedfrisby-nock.js</a></li>
-        </ul>
-    </dd>
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
-
-        
-<div class="param-desc">
-    <p>wrapped class</p>
-</div>
-
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">function</span>
-
-
-    </dd>
-</dl>
-
-    
-
-
-
-
-
-        
-    
-
-    
-
-    
-</article>
-
-</section>
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>// See available emoji at http://emoji.muan.co/
+import emojic from 'emojic'
+import { InvalidResponse } from './errors.js'
+import trace from './trace.js'
+
+/**
+ * Parse a JSON response buffer. Throws an `InvalidResponse` error when the
+ * JSON is unparseable.
+ *
+ * @param {string|Buffer} buffer - The raw response body.
+ * @returns {object|Array} The parsed JSON value.
+ */
+function parseJson(buffer) {
+  const logTrace = (...args) => trace.logTrace('fetch', ...args)
+  let json
+  try {
+    json = JSON.parse(buffer)
+  } catch (err) {
+    logTrace(emojic.dart, 'Response JSON (unparseable)', buffer)
+    throw new InvalidResponse({
+      prettyMessage: 'unparseable json response',
+      underlyingError: err,
+    })
+  }
+  logTrace(emojic.dart, 'Response JSON (before validation)', json, {
+    deep: true,
+  })
+  return json
+}
+
+export { parseJson }
+</code></pre>
+        </article>
+    </section>
 
 
 
